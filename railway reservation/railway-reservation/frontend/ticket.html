@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Ticket - RailBook</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav id="navbar"></nav>
+
+  <main class="container">
+    <div id="ticket"></div>
+    <div class="actions">
+      <button class="btn" onclick="window.print()">Print ticket</button>
+      <a class="btn btn-outline" href="mybookings.html">My Bookings</a>
+    </div>
+  </main>
+
+  <script src="js/common.js"></script>
+  <script>
+    if (requireLogin()) {
+      const pnr = new URLSearchParams(location.search).get("pnr");
+      const b = getBookings().find(x => x.pnr === pnr && x.userEmail === getCurrentUser().email);
+      const box = document.getElementById("ticket");
+
+      if (!b) {
+        box.innerHTML = '<p class="notice error">Ticket not found.</p>';
+      } else {
+        box.innerHTML = `
+          <div class="card ticket">
+            <div class="ticket-top">
+              <h2>🚆 E-Ticket</h2>
+              <span class="badge ${b.status === "ACTIVE" ? "ok" : "danger"}">${b.status}</span>
+            </div>
+            <p class="pnr">PNR: <strong>${b.pnr}</strong></p>
+            <h3>${b.trainName} <small>#${b.trainNo}</small></h3>
+            <div class="route">
+              <div><strong>${b.dep}</strong><br>${b.from}</div>
+              <div class="dur">${fmtDate(b.date)} &nbsp;|&nbsp; ${CLASSES[b.cls].name}</div>
+              <div><strong>${b.arr}</strong><br>${b.to}</div>
+            </div>
+            <table>
+              <tr><th>#</th><th>Name</th><th>Age</th><th>Gender</th><th>Status</th><th>Seat</th></tr>
+              ${b.passengers.map((p, i) => `
+                <tr>
+                  <td>${i + 1}</td><td>${esc(p.name)}</td><td>${p.age}</td><td>${p.gender}</td>
+                  <td>${b.status === "CANCELLED" ? "CANCELLED" : p.status}</td>
+                  <td><strong>${seatText(b, p)}</strong></td>
+                </tr>`).join("")}
+            </table>
+            <p>Total fare: <strong>${money(b.totalFare)}</strong></p>
+            <p><small>Booked on ${new Date(b.bookedOn).toLocaleString("en-IN")}. This is a simulation and not a valid travel document.</small></p>
+          </div>`;
+      }
+    }
+  </script>
+</body>
+</html>

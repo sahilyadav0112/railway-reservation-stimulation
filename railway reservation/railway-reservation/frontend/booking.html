@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Ticket - RailBook</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav id="navbar"></nav>
+
+  <main class="container">
+    <h1>Book Ticket</h1>
+    <div id="trainSummary" class="card"></div>
+
+    <form id="bookingForm" class="card">
+      <h2>Passenger details</h2>
+      <div id="passengers"></div>
+      <button type="button" id="addPassenger" class="btn btn-outline">+ Add passenger</button>
+      <hr>
+      <p class="total">Total fare: <strong id="totalFare"></strong></p>
+      <p id="error" class="error-text"></p>
+      <button type="submit" class="btn">Confirm Booking</button>
+    </form>
+  </main>
+
+  <script src="js/common.js"></script>
+  <script src="js/booking.js"></script>
+</body>
+</html>

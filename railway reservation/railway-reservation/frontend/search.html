@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Trains - RailBook</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav id="navbar"></nav>
+
+  <main class="container">
+    <h1>Search Trains</h1>
+    <form class="card search-card" action="search.html" method="get">
+      <div class="field">
+        <label for="from">From</label>
+        <select id="from" name="from" class="station-select" required></select>
+      </div>
+      <div class="field">
+        <label for="to">To</label>
+        <select id="to" name="to" class="station-select" required></select>
+      </div>
+      <div class="field">
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" required>
+      </div>
+      <button class="btn" type="submit">Search</button>
+    </form>
+
+    <div id="results"></div>
+  </main>
+
+  <script src="js/common.js"></script>
+  <script src="js/search.js"></script>
+</body>
+</html>
