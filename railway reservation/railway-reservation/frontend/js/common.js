@@ -45,17 +45,36 @@ const saveBookings = bookings => save("rr_bookings", bookings);
 
 // ---------- Login session ----------
 function getCurrentUser() {
-  const email = localStorage.getItem("rr_current");
-  return getUsers().find(u => u.email === email) || null;
+  const userId = localStorage.getItem("userId");
+  const name = localStorage.getItem("userName");
+  const email = localStorage.getItem("userEmail");
+
+  if (!userId || !email) return null;
+
+  return {
+    id: Number(userId),
+    name: name || "",
+    email: email
+  };
 }
-function setSession(email) { localStorage.setItem("rr_current", email); }
+
+function setSession(user) {
+  localStorage.setItem("userId", user.userId);
+  localStorage.setItem("userName", user.name);
+  localStorage.setItem("userEmail", user.email);
+}
+
 function logout() {
-  localStorage.removeItem("rr_current");
+  localStorage.removeItem("userId");
+  localStorage.removeItem("userName");
+  localStorage.removeItem("userEmail");
   location.href = "index.html";
 }
+
 // Call at the top of pages that need a logged-in user
 function requireLogin() {
   if (getCurrentUser()) return true;
+
   const page = location.pathname.split("/").pop() + location.search;
   location.href = "login.html?next=" + encodeURIComponent(page);
   return false;

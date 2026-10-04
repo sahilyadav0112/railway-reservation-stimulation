@@ -1,0 +1,17 @@
+# Maven build files
+backend/target/
+
+# IDE files
+.vscode/
+.idea/
+
+# Java compiled files
+*.class
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Local environment/configuration
+.env
+*.env

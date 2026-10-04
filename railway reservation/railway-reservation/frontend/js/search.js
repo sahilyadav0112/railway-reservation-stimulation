@@ -1,51 +1,197 @@
 const params = new URLSearchParams(location.search);
+
 const fromStation = params.get("from");
 const toStation = params.get("to");
 const travelDate = params.get("date");
+
+const fromSelect = document.getElementById("from");
+const toSelect = document.getElementById("to");
 const results = document.getElementById("results");
 
-// Keep the form filled in after searching
-if (fromStation) document.getElementById("from").value = fromStation;
-if (toStation) document.getElementById("to").value = toStation;
-if (travelDate) document.getElementById("date").value = travelDate;
+// Load stations from the backend
+async function loadStations() {
+  try {
+    const response = await fetch(
+      "http://localhost:8080/railway-reservation/stations"
+    );
 
-if (fromStation && toStation && travelDate) {
-  if (fromStation === toStation) {
-    results.innerHTML = '<p class="notice error">Source and destination cannot be the same.</p>';
-  } else {
-    const found = TRAINS.filter(t => t.from === fromStation && t.to === toStation);
-    if (found.length === 0) {
-      results.innerHTML = `<p class="notice">No trains found from ${fromStation} to ${toStation}. Try Mumbai → Delhi or Mumbai → Pune.</p>`;
-    } else {
-      results.innerHTML =
-        `<h2>${found.length} train(s): ${fromStation} → ${toStation} on ${fmtDate(travelDate)}</h2>` +
-        found.map(trainCard).join("");
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || "Unable to load stations.");
     }
+
+    fromSelect.innerHTML = '<option value="">Select station</option>';
+    toSelect.innerHTML = '<option value="">Select station</option>';
+
+    data.stations.forEach((station) => {
+
+      const fromOption = document.createElement("option");
+      fromOption.value = station.name;
+      fromOption.textContent =
+        `${station.name} (${station.code})`;
+
+      const toOption = document.createElement("option");
+      toOption.value = station.name;
+      toOption.textContent =
+        `${station.name} (${station.code})`;
+
+      fromSelect.appendChild(fromOption);
+      toSelect.appendChild(toOption);
+    });
+
+    // Restore selected values after loading stations
+    if (fromStation) {
+      fromSelect.value = fromStation;
+    }
+
+    if (toStation) {
+      toSelect.value = toStation;
+    }
+
+  } catch (error) {
+
+    console.error("Station loading error:", error);
+
+    results.innerHTML =
+      '<p class="notice error">Unable to load stations from the server.</p>';
   }
 }
 
-function trainCard(t) {
-  const classBoxes = Object.keys(CLASSES).map(cls => {
-    const seats = availableSeats(t.no, travelDate, cls);
-    const badge = seats > 0
-      ? `<span class="badge ok">${seats} available</span>`
-      : `<span class="badge warn">Waiting list</span>`;
-    return `
-      <a class="class-box" href="booking.html?train=${t.no}&date=${travelDate}&cls=${cls}">
-        <strong>${CLASSES[cls].name}</strong>
-        <span class="fare">${money(t.fare[cls])}</span>
-        ${badge}
-      </a>`;
-  }).join("");
+
+// Search trains using the backend
+async function searchTrains() {
+
+  if (!fromStation || !toStation || !travelDate) {
+    return;
+  }
+
+  if (fromStation === toStation) {
+
+    results.innerHTML =
+      '<p class="notice error">Source and destination cannot be the same.</p>';
+
+    return;
+  }
+
+  results.innerHTML =
+    '<p class="notice">Searching trains...</p>';
+
+  try {
+
+    const url =
+      "http://localhost:8080/railway-reservation/trains" +
+      "?from=" + encodeURIComponent(fromStation) +
+      "&to=" + encodeURIComponent(toStation);
+
+    const response = await fetch(url);
+
+    const data = await response.json();
+
+    if (!data.success) {
+
+      results.innerHTML =
+        `<p class="notice error">${data.message}</p>`;
+
+      return;
+    }
+
+    if (data.trains.length === 0) {
+
+      results.innerHTML =
+        `<p class="notice">
+          No trains found from ${fromStation} to ${toStation}.
+        </p>`;
+
+      return;
+    }
+
+    results.innerHTML =
+      `<h2>
+        ${data.trains.length} train(s):
+        ${fromStation} → ${toStation}
+        on ${fmtDate(travelDate)}
+      </h2>` +
+      data.trains.map(trainCard).join("");
+
+  } catch (error) {
+
+    console.error("Train search error:", error);
+
+    results.innerHTML =
+      '<p class="notice error">Unable to search trains. Please try again.</p>';
+  }
+}
+
+
+// Display a train returned by the backend
+function trainCard(train) {
 
   return `
     <div class="card">
-      <h3>${t.name} <small>#${t.no}</small></h3>
+
+      <h3>
+        ${train.name}
+        <small>#${train.number}</small>
+      </h3>
+
+      <p>
+        <strong>Type:</strong>
+        ${train.type || "Not specified"}
+      </p>
+
       <div class="route">
-        <div><strong>${t.dep}</strong><br>${t.from}</div>
-        <div class="dur">${t.dur}</div>
-        <div><strong>${t.arr}</strong><br>${t.to}</div>
+
+        <div>
+          <strong>${formatTime(train.departure)}</strong>
+          <br>
+          ${train.from}
+        </div>
+
+        <div class="dur">
+          →
+        </div>
+
+        <div>
+          <strong>${formatTime(train.arrival)}</strong>
+          <br>
+          ${train.to}
+        </div>
+
       </div>
-      <div class="classes">${classBoxes}</div>
-    </div>`;
+
+      <div class="classes">
+
+        <a
+          class="class-box"
+          href="booking.html?trainId=${encodeURIComponent(train.id)}&train=${encodeURIComponent(train.number)}&date=${encodeURIComponent(travelDate)}"
+        >
+          <strong>Select Train</strong>
+          <span class="fare">
+            Continue
+          </span>
+        </a>
+
+      </div>
+
+    </div>
+  `;
 }
+
+
+// Convert HH:mm:ss to HH:mm
+function formatTime(time) {
+
+  if (!time) {
+    return "";
+  }
+
+  return time.substring(0, 5);
+}
+
+
+// Load stations first
+loadStations();
+
+// Then perform search if parameters exist
+searchTrains();

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
+  <title>Payment - RailBook</title>
+
+  <link
+    rel="stylesheet"
+    href="css/style.css">
+</head>
+
+<body>
+
+  <nav id="navbar"></nav>
+
+  <main class="container">
+
+    <h1>Payment</h1>
+
+    <div
+      id="paymentBox"
+      class="card">
+
+      <p class="notice">
+        Loading payment details...
+      </p>
+
+    </div>
+
+  </main>
+
+  <script src="js/common.js"></script>
+
+  <script>
+
+    const API_BASE =
+      "http://localhost:8080/railway-reservation";
+
+
+    const params =
+      new URLSearchParams(
+        location.search
+      );
+
+
+    const bookingId =
+      params.get("bookingId");
+
+
+    const amount =
+      params.get("amount");
+
+
+    const box =
+      document.getElementById(
+        "paymentBox"
+      );
+
+
+    function showPaymentForm() {
+
+      box.innerHTML = `
+
+        <h2>
+          Complete Payment
+        </h2>
+
+        <p>
+          Booking ID:
+          <strong>
+            ${esc(bookingId)}
+          </strong>
+        </p>
+
+        <p>
+          Amount:
+          <strong>
+            ${money(amount)}
+          </strong>
+        </p>
+
+
+        <div class="field">
+
+          <label for="paymentMethod">
+            Payment Method
+          </label>
+
+
+          <select
+            id="paymentMethod">
+
+            <option value="UPI">
+              UPI
+            </option>
+
+            <option value="CARD">
+              Credit / Debit Card
+            </option>
+
+            <option value="NET_BANKING">
+              Net Banking
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <button
+          id="payButton"
+          class="btn">
+
+          Pay ₹${amount}
+
+        </button>
+
+      `;
+
+
+      document
+        .getElementById("payButton")
+        .addEventListener(
+          "click",
+          makePayment
+        );
+    }
+
+
+    async function makePayment() {
+
+      const user =
+        getCurrentUser();
+
+
+      if (!user) {
+
+        requireLogin();
+
+        return;
+      }
+
+
+      const paymentMethod =
+        document.getElementById(
+          "paymentMethod"
+        ).value;
+
+
+      const button =
+        document.getElementById(
+          "payButton"
+        );
+
+
+      button.disabled = true;
+
+      button.textContent =
+        "Processing Payment...";
+
+
+      try {
+
+        const formData =
+          new URLSearchParams();
+
+
+        formData.append(
+          "bookingId",
+          bookingId
+        );
+
+
+        formData.append(
+          "userId",
+          user.id
+        );
+
+
+        formData.append(
+          "paymentMethod",
+          paymentMethod
+        );
+
+
+        const response =
+          await fetch(
+            API_BASE + "/payment",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded"
+              },
+
+              body: formData
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+
+          alert(
+            data.message ||
+            "Payment failed."
+          );
+
+
+          button.disabled =
+            false;
+
+
+          button.textContent =
+            "Pay ₹" + amount;
+
+
+          return;
+        }
+
+
+        /*
+         * Get the PNR generated during booking.
+         */
+        let pnr = "";
+
+
+        const lastBooking =
+          sessionStorage.getItem(
+            "lastBooking"
+          );
+
+
+        if (lastBooking) {
+
+          try {
+
+            const booking =
+              JSON.parse(
+                lastBooking
+              );
+
+
+            pnr =
+              booking.pnr || "";
+
+          } catch (error) {
+
+            console.error(
+              "Unable to read booking details:",
+              error
+            );
+
+          }
+
+        }
+
+
+        /*
+         * Show successful payment.
+         */
+        box.innerHTML = `
+
+          <div class="notice">
+
+            <h2>
+              Payment Successful
+            </h2>
+
+
+            <p>
+              Payment ID:
+              <strong>
+                ${esc(data.paymentId)}
+              </strong>
+            </p>
+
+
+            <p>
+              Booking ID:
+              <strong>
+                ${esc(data.bookingId)}
+              </strong>
+            </p>
+
+
+            <p>
+              Amount:
+              <strong>
+                ${money(data.amount)}
+              </strong>
+            </p>
+
+
+            <p>
+              Method:
+              <strong>
+                ${esc(data.paymentMethod)}
+              </strong>
+            </p>
+
+
+            <p>
+              Status:
+              <strong>
+                ${esc(data.paymentStatus)}
+              </strong>
+            </p>
+
+
+            <br>
+
+
+            ${
+              pnr
+                ? `
+                  <a
+                    class="btn"
+                    href="ticket.html?pnr=${encodeURIComponent(pnr)}">
+
+                    View Ticket
+
+                  </a>
+                `
+                : `
+                  <p class="notice error">
+                    Ticket PNR could not be found.
+                    Please open My Bookings.
+                  </p>
+                `
+            }
+
+
+            <a
+              class="btn btn-outline"
+              href="mybookings.html">
+
+              My Bookings
+
+            </a>
+
+
+          </div>
+
+        `;
+
+
+      } catch (error) {
+
+        console.error(
+          "Payment error:",
+          error
+        );
+
+
+        alert(
+          "Unable to connect to payment server."
+        );
+
+
+        button.disabled =
+          false;
+
+
+        button.textContent =
+          "Pay ₹" + amount;
+      }
+
+    }
+
+
+    function esc(value) {
+
+      if (
+        value === null ||
+        value === undefined
+      ) {
+
+        return "";
+      }
+
+
+      return String(value)
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+        .replace(
+          /</g,
+          "&lt;"
+        )
+        .replace(
+          />/g,
+          "&gt;"
+        )
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+
+    }
+
+
+    /*
+     * Check payment page parameters.
+     */
+    if (
+      !bookingId ||
+      !amount
+    ) {
+
+      box.innerHTML =
+        '<p class="notice error">' +
+        'Booking information is missing.' +
+        '</p>';
+
+    } else {
+
+      showPaymentForm();
+
+    }
+
+  </script>
+
+</body>
+
+</html>

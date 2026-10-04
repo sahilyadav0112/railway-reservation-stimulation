@@ -3,57 +3,462 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>E-Ticket - RailBook</title>
+
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
+
   <nav id="navbar"></nav>
 
   <main class="container">
-    <div id="ticket"></div>
-    <div class="actions">
-      <button class="btn" onclick="window.print()">Print ticket</button>
-      <a class="btn btn-outline" href="mybookings.html">My Bookings</a>
+
+    <div id="ticket">
+      <p class="notice">Loading ticket...</p>
     </div>
+
+    <div class="actions">
+
+      <button
+        class="btn"
+        onclick="window.print()">
+        Print Ticket
+      </button>
+
+      <a
+        class="btn btn-outline"
+        href="mybookings.html">
+        My Bookings
+      </a>
+
+    </div>
+
   </main>
 
-  <script src="js/common.js"></script>
-  <script>
-    if (requireLogin()) {
-      const pnr = new URLSearchParams(location.search).get("pnr");
-      const b = getBookings().find(x => x.pnr === pnr && x.userEmail === getCurrentUser().email);
-      const box = document.getElementById("ticket");
 
-      if (!b) {
-        box.innerHTML = '<p class="notice error">Ticket not found.</p>';
-      } else {
-        box.innerHTML = `
-          <div class="card ticket">
-            <div class="ticket-top">
-              <h2>🚆 E-Ticket</h2>
-              <span class="badge ${b.status === "ACTIVE" ? "ok" : "danger"}">${b.status}</span>
-            </div>
-            <p class="pnr">PNR: <strong>${b.pnr}</strong></p>
-            <h3>${b.trainName} <small>#${b.trainNo}</small></h3>
-            <div class="route">
-              <div><strong>${b.dep}</strong><br>${b.from}</div>
-              <div class="dur">${fmtDate(b.date)} &nbsp;|&nbsp; ${CLASSES[b.cls].name}</div>
-              <div><strong>${b.arr}</strong><br>${b.to}</div>
-            </div>
-            <table>
-              <tr><th>#</th><th>Name</th><th>Age</th><th>Gender</th><th>Status</th><th>Seat</th></tr>
-              ${b.passengers.map((p, i) => `
-                <tr>
-                  <td>${i + 1}</td><td>${esc(p.name)}</td><td>${p.age}</td><td>${p.gender}</td>
-                  <td>${b.status === "CANCELLED" ? "CANCELLED" : p.status}</td>
-                  <td><strong>${seatText(b, p)}</strong></td>
-                </tr>`).join("")}
-            </table>
-            <p>Total fare: <strong>${money(b.totalFare)}</strong></p>
-            <p><small>Booked on ${new Date(b.bookedOn).toLocaleString("en-IN")}. This is a simulation and not a valid travel document.</small></p>
-          </div>`;
+  <script src="js/common.js"></script>
+
+  <script>
+
+    const API_BASE =
+      "http://localhost:8080/railway-reservation";
+
+
+    async function loadTicket() {
+
+      const box =
+        document.getElementById("ticket");
+
+
+      /*
+       * Get PNR from URL
+       *
+       * Example:
+       * ticket.html?pnr=RB1791135578528
+       */
+      const pnr =
+        new URLSearchParams(
+          location.search
+        ).get("pnr");
+
+
+      if (!pnr) {
+
+        box.innerHTML =
+          '<p class="notice error">' +
+          'PNR is missing.' +
+          '</p>';
+
+        return;
+      }
+
+
+      /*
+       * Check whether user is logged in
+       */
+      const user =
+        getCurrentUser();
+
+
+      if (!user) {
+
+        requireLogin();
+
+        return;
+      }
+
+
+      try {
+
+        /*
+         * Ask Java backend for ticket details
+         */
+        const response =
+          await fetch(
+            API_BASE +
+            "/booking?pnr=" +
+            encodeURIComponent(pnr)
+          );
+
+
+        const data =
+          await response.json();
+
+
+        console.log(
+          "Ticket response:",
+          data
+        );
+
+
+        /*
+         * Backend error
+         */
+        if (!response.ok ||
+            !data.success) {
+
+          box.innerHTML =
+            `<p class="notice error">
+              ${data.message ||
+                "Ticket not found."}
+            </p>`;
+
+          return;
+        }
+
+
+        /*
+         * Security check:
+         * make sure this ticket belongs
+         * to the currently logged-in user.
+         */
+        if (
+          Number(data.userId) !==
+          Number(user.id)
+        ) {
+
+          box.innerHTML =
+            '<p class="notice error">' +
+            'You are not authorized to view this ticket.' +
+            '</p>';
+
+          return;
+        }
+
+
+        renderTicket(data);
+
+
+      } catch (error) {
+
+        console.error(
+          "Ticket loading error:",
+          error
+        );
+
+
+        box.innerHTML =
+          '<p class="notice error">' +
+          'Unable to connect to the booking server.' +
+          '</p>';
       }
     }
+
+
+    function renderTicket(ticket) {
+
+      const box =
+        document.getElementById("ticket");
+
+
+      const statusClass =
+        ticket.status === "CONFIRMED"
+          ? "ok"
+          : "danger";
+
+
+      const passengerRows =
+        ticket.passengers
+          .map(
+            (passenger, index) => `
+
+              <tr>
+
+                <td>
+                  ${index + 1}
+                </td>
+
+                <td>
+                  ${esc(passenger.name)}
+                </td>
+
+                <td>
+                  ${passenger.age}
+                </td>
+
+                <td>
+                  ${esc(passenger.gender)}
+                </td>
+
+                <td>
+                  ${esc(passenger.status)}
+                </td>
+
+                <td>
+                  <strong>
+                    ${esc(passenger.seatNumber)}
+                  </strong>
+                </td>
+
+              </tr>
+
+            `
+          )
+          .join("");
+
+
+      box.innerHTML = `
+
+        <div class="card ticket">
+
+          <div class="ticket-top">
+
+            <h2>
+              🚆 E-Ticket
+            </h2>
+
+            <span class="badge ${statusClass}">
+              ${esc(ticket.status)}
+            </span>
+
+          </div>
+
+
+          <p class="pnr">
+            PNR:
+            <strong>
+              ${esc(ticket.pnr)}
+            </strong>
+          </p>
+
+
+          <h3>
+            ${esc(ticket.trainName)}
+
+            <small>
+              #${esc(ticket.trainNumber)}
+            </small>
+          </h3>
+
+
+          <div class="route">
+
+            <div>
+
+              <strong>
+                ${formatTime(ticket.departure)}
+              </strong>
+
+              <br>
+
+              ${esc(ticket.from)}
+
+            </div>
+
+
+            <div class="dur">
+
+              ${fmtDate(ticket.journeyDate)}
+
+              &nbsp;|&nbsp;
+
+              ${esc(ticket.className)}
+
+              (${esc(ticket.classCode)})
+
+            </div>
+
+
+            <div>
+
+              <strong>
+                ${formatTime(ticket.arrival)}
+              </strong>
+
+              <br>
+
+              ${esc(ticket.to)}
+
+            </div>
+
+          </div>
+
+
+          <hr>
+
+
+          <h3>
+            Passenger Details
+          </h3>
+
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>#</th>
+
+                <th>Name</th>
+
+                <th>Age</th>
+
+                <th>Gender</th>
+
+                <th>Status</th>
+
+                <th>Seat</th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${passengerRows}
+
+            </tbody>
+
+          </table>
+
+
+          <p>
+
+            Total fare:
+
+            <strong>
+              ${money(ticket.totalFare)}
+            </strong>
+
+          </p>
+
+
+          <p>
+
+            Booking date:
+
+            <strong>
+              ${formatBookingDate(
+                ticket.bookingDate
+              )}
+            </strong>
+
+          </p>
+
+
+          <p>
+
+            <small>
+              This is a simulation and not
+              a valid travel document.
+            </small>
+
+          </p>
+
+        </div>
+
+      `;
+    }
+
+
+    function formatTime(time) {
+
+      if (!time) {
+        return "";
+      }
+
+
+      return time.substring(
+        0,
+        5
+      );
+    }
+
+
+    function formatBookingDate(value) {
+
+      if (!value) {
+        return "";
+      }
+
+
+      const date =
+        new Date(
+          value.replace(" ", "T")
+        );
+
+
+      if (Number.isNaN(
+        date.getTime()
+      )) {
+
+        return value;
+      }
+
+
+      return date.toLocaleString(
+        "en-IN"
+      );
+    }
+
+
+    /*
+     * Escape HTML so database values
+     * are safely displayed.
+     */
+    function esc(value) {
+
+      if (value === null ||
+          value === undefined) {
+
+        return "";
+      }
+
+
+      return String(value)
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+        .replace(
+          /</g,
+          "&lt;"
+        )
+        .replace(
+          />/g,
+          "&gt;"
+        )
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+    }
+
+
+    /*
+     * Load ticket when page opens.
+     */
+    loadTicket();
+
   </script>
+
 </body>
 </html>
