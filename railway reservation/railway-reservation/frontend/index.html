@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailBook - Railway Reservation</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav id="navbar"></nav>
+
+  <header class="hero">
+    <h1>Book your train tickets</h1>
+    <p>Search trains, reserve seats and manage your journeys.</p>
+    <form class="card search-card" action="search.html" method="get">
+      <div class="field">
+        <label for="from">From</label>
+        <select id="from" name="from" class="station-select" required></select>
+      </div>
+      <div class="field">
+        <label for="to">To</label>
+        <select id="to" name="to" class="station-select" required></select>
+      </div>
+      <div class="field">
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" required>
+      </div>
+      <button class="btn" type="submit">Search Trains</button>
+    </form>
+  </header>
+
+  <section class="container features">
+    <div class="card"><h3>🔍 Search</h3><p>Find trains between stations and check seat availability instantly.</p></div>
+    <div class="card"><h3>🎫 Book</h3><p>Reserve seats for up to 6 passengers. Full trains go to a waiting list.</p></div>
+    <div class="card"><h3>📋 Manage</h3><p>View tickets, and cancel bookings from My Bookings.</p></div>
+  </section>
+
+  <footer>Railway Reservation Simulation System - for learning purposes only</footer>
+
+  <script src="js/common.js"></script>
+</body>
+</html>
