@@ -6,36 +6,30 @@ import java.sql.SQLException;
 
 public class DBConnection {
 
-    private static final String URL =
-            "jdbc:mysql://localhost:3306/railway_reservation";
-
-    private static final String USER =
-            System.getenv("RAILWAY_DB_USER");
-
-    private static final String PASSWORD =
-            System.getenv("RAILWAY_DB_PASSWORD");
-
     public static Connection getConnection() throws SQLException {
 
-        if (USER == null || PASSWORD == null) {
+        String host = System.getenv("RAILWAY_DB_HOST");
+        String port = System.getenv("RAILWAY_DB_PORT");
+        String database = System.getenv("RAILWAY_DB_NAME");
+        String user = System.getenv("RAILWAY_DB_USER");
+        String password = System.getenv("RAILWAY_DB_PASSWORD");
+
+        if (host == null || port == null || database == null
+                || user == null || password == null) {
             throw new SQLException(
-                    "Database credentials are not configured."
+                    "Database environment variables are not configured."
             );
         }
+
+        String url = "jdbc:mysql://" + host + ":" + port + "/"
+                + database + "?sslMode=REQUIRED";
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
-            throw new SQLException(
-                    "MySQL JDBC Driver not found.",
-                    e
-            );
+            throw new SQLException("MySQL JDBC Driver not found.", e);
         }
 
-        return DriverManager.getConnection(
-                URL,
-                USER,
-                PASSWORD
-        );
+        return DriverManager.getConnection(url, user, password);
     }
 }
